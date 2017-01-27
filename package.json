@@ -1,0 +1,11 @@
+{
+  "name": "HelloWorld",
+  "cozy-type": "static",
+  "cozy-displayName": "Hello World",
+  "version": "1.0.0",
+  "description": "Ceci est une app de test - ma premiere appli sur CozyCloud",
+  "icon-path": "main_icon.png",
+  "cozy-permissions": {
+    "Contacts": "This app manages your contacts"
+  }
+}
