@@ -1,0 +1,29 @@
+{
+  "author": "Cédric Patchane",
+  "name": "cozy-portfolio",
+  "description": "Create your portfolio on your Cozy Cloud with the possibility to grab information from DoYouBuzz and OpenBadges",
+  "version": "0.0.3",
+  "homepage": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": "~0.6.10"
+  },
+  "scripts": {
+    "start": "brunch watch --server"
+  },
+  "dependencies": {
+    "clean-css-brunch": ">= 1.0 < 1.4",
+    "css-brunch": ">= 1.0 < 1.4",
+    "jade-brunch": "^1.8.2",
+    "javascript-brunch": ">= 1.0 < 1.4",
+    "stylus-brunch": ">= 1.0 < 1.4",
+    "uglify-js-brunch": ">= 1.0 < 1.4"
+  },
+  "devDependencies": {
+    "mocha": "0.14.0",
+    "expect.js": "0.1.2"
+  }
+}

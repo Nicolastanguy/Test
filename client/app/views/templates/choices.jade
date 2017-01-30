@@ -1,0 +1,779 @@
+//-Bootstrap links and main style
+script( src='//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js' )
+script( src='//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js' )
+link(href="//maxcdn.bootstrapcdn.com/bootswatch/3.3.0/flatly/bootstrap.min.css", rel="stylesheet")
+//- Stylesheets
+style
+  include main.css
+  include choices.css
+  
+div.container
+  //- Left side menu elements
+  div.col-md-2.leftMenu
+    div.sidebar-nav
+      div.navbar.navbar-default(role='navigation')
+        div.navbar-header
+          //- Mobile button
+          button.navbar-toggle(type='button', data-toggle='collapse', data-target = '.sidebar-navbar-collapse')
+            span.sr-only Toggle navigation
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          span.visible-xs.navbar-brand Menu
+        //- Menu elements
+        div.navbar-collapse.collapse.sidebar-navbar-collapse
+          ul.nav.navbar-nav
+            li
+              a(href='#') Mon profil
+            li
+              a(href='/public/portfolio' target="_blank") Voir mon Portfolio
+            li.active
+              a(href='#choices') Mes choix
+            li
+              a(href='#accountSettings') Paramètres
+  //- Main container
+  div.col-md-10.choicesContainer#choicesContainer
+    //- Container for all tabs (document categories)
+    div.row#TabsContainer
+      div.row.text-center
+        h1.col-md-12 Mes choix
+        h4.col-md-12#noDocumentsMessage(hidden="true") Aucun documents à afficher. Vous pouvez synchroniser des documents DoYouBuzz ou en ajouter via la partie ci-dessous. Vous pouvez aussi récupérer vos badges de votre BackPack OpenBadges.
+      //- It will contain all categories tabs dynamically here
+    //- Submiting buttons and UI messages
+    div.row#submitPart
+      div.col-md-12.submitButton.text-center
+        //- button to submit information
+        button.btn.btn-primary#submitChanges(onclick="submitChanges()") Valider mes choix
+        //- button to get documents from DoYouBuzz
+        button.btn.btn-warning#syncDYBDocumentsButton(type="button", onclick="syncDYBDocuments()") Synchroniser mes documents DoYouBuzz
+        //- UI messages
+        div.alert.alert-success#savedMessage(hidden="true")
+        div.alert.alert-danger#errorMessage(hidden="true")
+    //- part used to add a new document
+    div.row#addDocumentPart
+      //- title
+      div.row.text-left
+        h3.col-md-12 Ajouter un document
+      //- form container
+      div.documentBlock.col-md-9#addDocumentBlock(style="display:none")
+        div.documentContent.col-md-12#addDocumentContent
+          //- document title
+          div.row
+            label Titre<span class="mandatoryStar">*</span> :
+            input#title(type="text", placeholder="Titre du document" name="title")
+          //- document url
+          div.row
+            label URL :
+            input#url(type="text", placeholder="Url de votre document" name="url")
+          //- related website
+          div.row
+            label Site web associé :
+            input#relatedWebsite(type="text", placeholder="www.mywebsite.fr" name="relatedWebsite")
+          //- category
+          div.row
+            label Catégorie<span class="mandatoryStar">*</span> :
+            input#category(type="text", placeholder="Sa catégorie" name="category")
+          //- creation date
+          div.row
+            label Date de réalisation<span class="mandatoryStar">*</span> :
+            input#creationDate(type="text", placeholder="jj/mm/aaaa" name="creationDate" maxlength="10")
+          //- document description
+          div.row
+            label Description<span class="mandatoryStar">*</span> :
+            textarea#description(style="resize:none;width:60%;height:100px;", placeholder="Description du document..." name="description")
+          //- buttons part
+          div.row.text-center
+            //- to submit
+            button.btn.btn-primary#addDocumentButton(onclick="addDocument()") Ajouter ce document
+            //- to hide the form
+            button.btn.btn-secondary#cancelButton(onclick="showAddDocumentForm(false)") Cacher
+          //- UI error message
+          div.row.alert.alert-danger#errorMessageAddDocument(style="margin-top:5px;", hidden="true")
+      //- add document form placeholder
+      div.documentBlock.col-md-3#placeHolderAddDocumentBlock(onclick="showAddDocumentForm(true)")
+        div.documentContent.col-md-12#placeHolderAddDocumentContent
+          button#addButton +
+        
+      
+script(type="text/javascript").
+  /** Global variables **/
+  var groups = []; //all groups of badges will be store in this object
+  var documents = []; //all documents will be store in this array
+  //we store in this next object all categories already built (or reserved) to avoid duplicated categories
+  var categoriesAlreadyBuilt = {"Présentation" : true, "Badges" : true}; //exemple: categoriesAlreadyBuilt["Vidéos"] = true;
+  var documentsAlreadyBuilt = {}; // all documents built will be here with as value true and as key the matching document id
+  var isADocumentInEditingMode = false; //boolean used to know if one document is already in the editing mode (avoid two documents in the editing mode in the same time)
+  
+  /** initialisation **/
+  init(true,false,false); //first running so this is not an update
+  
+  
+  /***********************/
+  /** General functions **/
+  /***********************/
+  
+  //function run on page loading
+  // isFirstRunning : true if this this is the very fist running of the function (here this is the page loading) -> build all documents and badges
+  // isDocumentsUpdate : true if we want to build new document HTML structures on the page
+  // isBadgeUpdate : true if we want to rebuild the badges HTML strucutre (when we sync with the OpenBadges backpack)
+  function init(isFirstRunning, isDocumentsUpdate, isBadgeUpdate){
+    //first, we remove all UI messages
+    document.getElementById("savedMessage").setAttribute("hidden", true);
+    document.getElementById("errorMessage").setAttribute("hidden", true);
+    
+    //get all documents from database and build them on the page
+    if(isFirstRunning || isDocumentsUpdate)getAndBuildDocuments(isDocumentsUpdate);
+    
+    //get all badges from database and build them on page
+    if(isFirstRunning || isBadgeUpdate)getAndBuildBadges(isBadgeUpdate);
+    
+    if(!isFirstRunning){
+      document.getElementById("savedMessage").innerHTML = "Documents mis à jours";
+      document.getElementById("savedMessage").removeAttribute("hidden");
+    }
+  }
+  
+ 
+  //function for selection category behavior, it takes the clicked tab as parameter
+  function chooseCategory(element){
+    //if this tab was already selected, we unselect it
+    if(element.parentNode.className == "row tab choiceCategory"){
+      element.parentNode.className = "row tab";
+      return;
+    }
+    //if this is tab was not selected, we unselect all other tab and select this one
+    var categoriesDIV = document.getElementById("choicesContainer").getElementsByClassName("tab");
+    for(var i in categoriesDIV){
+      categoriesDIV[i].className = "row tab";
+    }
+    element.parentNode.className = "row tab choiceCategory";
+  }
+  
+  
+  //function to submit all document and badges visibilities
+  function submitChanges(){
+    //first, we remove all UI messages
+    document.getElementById("savedMessage").setAttribute("hidden", true);
+    document.getElementById("errorMessage").setAttribute("hidden", true);
+    
+    /**submit document visibilities**/
+    var documentInputs = document.getElementsByClassName("documentVisibility"); //all document visibility checkboxes
+    var documentsToSubmit = {}; // will be sent to the database for the update
+    //we get all visibility checkboxes value and update the object that will be sent to the database
+    for(var i=0; i<documentInputs.length; i++){
+      documentsToSubmit[documentInputs[i].getAttribute("documentID")] = documentInputs[i].checked;
+    }
+    //request
+    var xmlHttpUpdateDocuments = new XMLHttpRequest();
+    xmlHttpUpdateDocuments.open( "PUT", "updateDocumentsVisibilities", false ); // false for synchronous request
+    xmlHttpUpdateDocuments.setRequestHeader("Content-type", "application/json");
+    xmlHttpUpdateDocuments.send( JSON.stringify(documentsToSubmit) );
+    
+    /**submit badges visibilities**/
+    var badgesInputs = document.getElementsByClassName("badgeVisibility"); //all badge visibility checkboxes
+    var badgesToSubmit = {}; // will be sent to the database for the update
+    //we get all visibility checkboxes value and update the object that will be sent to the database
+    for(var i=0; i<badgesInputs.length; i++){
+      badgesToSubmit[badgesInputs[i].getAttribute("badge")] = badgesInputs[i].checked;
+    }
+    //request
+    var xmlHttpUpdateBadges = new XMLHttpRequest();
+    xmlHttpUpdateBadges.open( "PUT", "updateBadgesVisibilities", false ); // false for synchronous request
+    xmlHttpUpdateBadges.setRequestHeader("Content-type", "application/json");
+    xmlHttpUpdateBadges.send( JSON.stringify(badgesToSubmit) );
+    
+    //UI messages
+    if((xmlHttpUpdateDocuments.status == 200 || xmlHttpUpdateDocuments.status == 304) && (xmlHttpUpdateBadges.status == 200 || xmlHttpUpdateBadges.status == 304)){
+      document.getElementById("savedMessage").innerHTML = "Changements sauvegardés avec succès";
+      document.getElementById("savedMessage").removeAttribute("hidden");
+    }else{//error
+      document.getElementById("errorMessage").innerHTML = "Une erreur du serveur est survenue";
+      document.getElementById("errorMessage").removeAttribute("hidden");
+    }
+  }
+  
+  
+  /**********************/
+  /** Badges functions **/
+  /**********************/
+  
+  //function to get all badges from database and build them on the html page
+  // isUpdate : true if this is an update and not the first building of the badges tab
+  function getAndBuildBadges(isUpdate){
+    //get all badges from database and build them on page
+    //request
+    var xmlHttpGroups = new XMLHttpRequest();
+    xmlHttpGroups.open( "GET", "getBadgesGroup", false ); // false for synchronous request
+    xmlHttpGroups.send();
+    if(xmlHttpGroups.status != 200 && xmlHttpGroups.status != 304){ //if error
+      document.getElementById("errorMessage").innerHTML = "Une erreur du serveur est survenue pour récupérer les badges";
+      document.getElementById("errorMessage").removeAttribute("hidden");
+      return;
+    }
+    groups = JSON.parse(xmlHttpGroups.responseText);
+    
+    if(isUpdate){ // if this an update, we empty the badges tab
+      document.getElementById("badgesTabContent").innerHTML = "";
+    }else{ //if this is the first running, we build the badges tab
+      var badgesTabHTML = '<div class="row tab" id="badgesTab">' +
+                            '<a class="tabTitle col-md-12" onclick="chooseCategory(this);">Badges</a>' +
+                            '<div class="docsContainer col-md-12" id="badgesTabContent"></div>' +
+                            '<button class="btn btn-primary" id="syncOBbutton" onclick="syncObenBadgesBackPack()">Récupérer de mon BackPack (OpenBadges)</button>' +
+                        '</div>';
+      document.getElementById("TabsContainer").innerHTML += badgesTabHTML;
+    }
+
+    var badges = {};
+    //and we build each badge of each group
+    groups.forEach(function(group, group_index, array){
+      badges = group.badges;
+      badges.forEach(function(badge, badge_index, array){
+        buildBadge(badge.name, badge.imageUrl, badge.issuerName, badge.issuerUrl, badge.issuedOn, badge.description, badge.criteria, badge.visibility, group_index+"_"+badge_index);
+        //we use group_index and badge_index here in order to get a unique id 
+      });
+    });
+    //successful message if this is an update
+    if(isUpdate){
+      var successMessage = document.getElementById("savedMessage");
+      successMessage.innerHTML = "Badges mis à jour avec succès";
+      successMessage.removeAttribute("hidden");
+    }
+    //if there is not any documents to display, we don't need the submit button (because there are no visibilities to update)
+    //we disable the button
+    if(groups.length == 0 && documents.length == 0){
+      document.getElementById("submitChanges").disabled = true;
+      document.getElementById("submitChanges").style.opacity = "0.3";
+      document.getElementById("noDocumentsMessage").removeAttribute("hidden");
+    }else{ //in all other cases we need the button
+      document.getElementById("submitChanges").disabled = false;
+      document.getElementById("submitChanges").style.opacity = "1";
+      document.getElementById("noDocumentsMessage").setAttribute("hidden", true);
+    }
+  }
+  
+    
+  //function to build a badge on the page
+  //all parameters here is badges properties but index which allows here to get a unique id
+  function buildBadge(badgeName, imageUrl, issuerName, issuerUrl, issueDate, description, hostedUrl, visibility, index){
+    //id for the badge visibility input we need a unique id
+    var badgeId = "badge_"+index;
+    //get the visibility value
+    var checked = visibility ? "checked" : "";
+    //badge html building
+    var badgeHTML = 
+        '<div class="badgeBlock col-md-6">' +
+          '<div class="badgeContent col-md-12">' +
+            '<img class="badgeImage" src="' + imageUrl + '"/>'+
+            '<div class="badgeDetails">' +
+              '<input id="'+ badgeId +'" badge="' + badgeName + '" class="visibilityCheckBox badgeVisibility" type="checkbox" name="' + badgeId + '" '+ checked +' />' +
+              '<label for="' + badgeId + '"></label>' +
+              '<p class="badgeIssuer"> <span class="badgeName">' + badgeName + '</span>' +
+                ', délivré par <a href="' + issuerUrl + '">' + issuerName + '</a>, le ' + issueDate + '' +
+              '</p>' +
+              '<p class="badgeDescription">' + description + '</p>' +
+              '<a class="badgeLink" target="_blank" href="' + hostedUrl + '">Voir sur le site d\'origine ></a>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      
+      //add to badges tab
+      document.getElementById("badgesTabContent").innerHTML += badgeHTML;
+  }
+  
+
+  //function to sync badges with OpenBadges BackPack
+  function syncObenBadgesBackPack(){
+    //we warn the user about the changes
+    if(confirm("Attention : les paramètres de visibilité de vos badges seront par défaut désactivés, il vous faudra les rechoisir, voulez-vous continuez?")){
+        //we remove potential error messages
+        document.getElementById("errorMessage").setAttribute("hidden", true);
+        //request to update badges in database
+        var xmlHttpSync = new XMLHttpRequest();
+        xmlHttpSync.open( "GET", "syncBadgesGroup", true ); // true for asynchronous request
+        xmlHttpSync.onreadystatechange = function(){
+          if (xmlHttpSync.readyState == 4 && (xmlHttpSync.status == 200 || xmlHttpSync.status == 304)) { //if success
+            //we rebuild all the badges tab content
+            init(false, false, true); //badges update but not document update
+          } else if (xmlHttpSync.readyState == 4 && xmlHttpSync.status == 404){ //if error 404
+            var errorMessage = document.getElementById("errorMessage");
+            errorMessage.removeAttribute("hidden");
+            errorMessage.innerHTML = xmlHttpSync.responseText;
+          }else if(xmlHttpSync.readyState == 4 && xmlHttpSync.status == 500){ //if error 500
+            var errorMessage = document.getElementById("errorMessage");
+            errorMessage.removeAttribute("hidden");
+            errorMessage.innerHTML = "Erreur serveur : "+xmlHttpSync.responseText;
+          }else if(xmlHttpSync.readyState == 4){//if other errors
+            var errorMessage = document.getElementById("errorMessage");
+            errorMessage.removeAttribute("hidden");
+            errorMessage.innerHTML = "Une erreur du serveur est survenue";
+          }
+        }
+        xmlHttpSync.send();
+    }
+  }
+  
+  
+  /*************************/
+  /** Documents functions **/
+  /*************************/
+  
+  //function to add a new document from the form into the database and on the page
+  function addDocument(){
+    //we remove potential error messages
+    document.getElementById("errorMessageAddDocument").setAttribute("hidden", true);
+    //document title input
+    var title = document.getElementById("title");
+    //document url input
+    var url = document.getElementById("url");
+    //related website input
+    var relatedWebsite = document.getElementById("relatedWebsite");
+    //category input
+    var category = document.getElementById("category");
+    //creation date input
+    var creationDate = document.getElementById("creationDate");
+    //description textarea 
+    var description = document.getElementById("description");
+    //div for error messages to display in case of error
+    var errorMessage = document.getElementById("errorMessageAddDocument");
+    //regex to check the date format
+    var dateRegex = /^(0[1-9]|[12][0-9]|3[01])[/](0[1-9]|1[012])[/]\d{4}$/;
+    //regex to test the compatibility to be a html/css id
+    var cssIDRegex = /^[A-Za-z]+[A-Za-zÀ-ÿ0-9_\-\:\. ]*$/; //we will use the category as css id after, so we valid it now (we will replace spaces as well)
+    //regex to check the url format
+    var urlRegex = /(http(s)?:\/\/.)(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;
+    //check all mandatory inputs
+    if(title.value == ""){ //title
+      errorMessage.innerHTML = "Veuillez ajouter un titre.";
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }else if(category.value == "" || !category.value.match(cssIDRegex)){ //category test 1
+      errorMessage.innerHTML = 'Veuillez assigner une catégorie correcte. (Doit commencé par une lettre et peut contenir uniquement : des lettres, des chiffres, des espaces, "-", "_", ":" et ".")';
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }else if(category.value == "Badges" || category.value == "Présentation"){ //category test 2
+      errorMessage.innerHTML = 'Les catégories "Badges" et "Aperçu" ne peuvent pas être utilisées. Veuillez modifier.';
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }else if(creationDate.value == "" || !creationDate.value.match(dateRegex)){ //creation date
+      errorMessage.innerHTML = "Veuillez ajouter une date correcte (format : JJ/MM/AAAA).";
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }else if(description.value == ""){ //description
+      errorMessage.innerHTML = "Veuillez ajouter une description.";
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }else if(url.value != "" && !url.value.match(urlRegex)){ //url
+      errorMessage.innerHTML = 'L\'adresse URL du document est incorrecte (peut être avez-vous oublier "http://" ou "https://" ?)';
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }else if(relatedWebsite.value != "" && !relatedWebsite.value.match(urlRegex)){ //related website
+      errorMessage.innerHTML = 'L\'adresse URL du site web associé est incorrecte (peut être avez-vous oublier "http://" ou "https://" ?)';
+      document.getElementById("errorMessageAddDocument").removeAttribute("hidden");
+      return;
+    }
+    //data object that will be sent to the database to be added
+    var dataToAdd = {
+      "title" : title.value,
+      "url" : url.value,
+      "relatedWebsite" : relatedWebsite.value,
+      "category" : category.value,
+      "creationDate" : creationDate.value,
+      "description" : description.value
+    };
+    //we remove potential UI messages
+    document.getElementById("savedMessage").setAttribute("hidden", true);
+    document.getElementById("errorMessage").setAttribute("hidden", true);
+    //request
+    var xmlHttpAddDocument = new XMLHttpRequest();
+    xmlHttpAddDocument.open( "POST", "addPortfolioDocument", true ); //true for asynchronous request
+    xmlHttpAddDocument.setRequestHeader("Content-type", "application/json");
+    xmlHttpAddDocument.onreadystatechange = function(){
+          if (xmlHttpAddDocument.readyState == 4 && (xmlHttpAddDocument.status == 200 || xmlHttpAddDocument.status == 304)) { //if success
+            //we reset the form
+            title.value = "";
+            url.value = "";
+            relatedWebsite.value = "";
+            category.value = "";
+            creationDate.value = "";
+            description.value = "";
+            showAddDocumentForm(false); //we hide the form to show the placeholder
+            init(false, true, false); //documents update
+            //we display a successful message
+            document.getElementById("savedMessage").innerHTML = xmlHttpAddDocument.responseText;
+            document.getElementById("savedMessage").removeAttribute("hidden");
+          }
+          if (xmlHttpAddDocument.readyState == 4 && xmlHttpAddDocument.status == 500) { //if error
+            //display error message
+            document.getElementById("errorMessage").innerHTML = xmlHttpAddDocument.responseText;
+            document.getElementById("errorMessage").removeAttribute("hidden");
+          }
+        }
+    xmlHttpAddDocument.send(JSON.stringify(dataToAdd));
+  }
+  
+  //function to hide/display the document adding form and use instead the placeholder
+  //showFormAction : false to hide the form and display the placehfolder, and true for the opposite action  
+  function showAddDocumentForm(showFormAction){
+    if(showFormAction){
+      document.getElementById("placeHolderAddDocumentBlock").setAttribute("style", "display:none");
+      document.getElementById("addDocumentBlock").removeAttribute("style");
+      window.scrollTo(0,document.body.scrollHeight);//get the user to the bottom of the page
+    }else{
+      document.getElementById("addDocumentBlock").setAttribute("style", "display:none");
+      document.getElementById("placeHolderAddDocumentBlock").removeAttribute("style");
+      window.scrollTo(0, 0); //get the user to the top of the page to show all the adding form
+    }
+  }
+  
+  //get all documents from database and build them on the page
+  // isUpdate : true if this is an update and not the first building of the documents tabs
+  function getAndBuildDocuments(isUpdate){
+    var xmlHttpDocuments = new XMLHttpRequest();
+    xmlHttpDocuments.open( "GET", "getPortfolioDocuments", false ); // false for synchronous request
+    xmlHttpDocuments.send();
+    if(xmlHttpDocuments.status != 200 && xmlHttpDocuments.status != 304){ //if error
+      document.getElementById("errorMessage").innerHTML = "Une erreur du serveur est survenue pour récupérer les documents";
+      document.getElementById("errorMessage").removeAttribute("hidden");
+      return;
+    }
+    //we get all documents
+    documents = JSON.parse(xmlHttpDocuments.responseText);
+    
+    //for each document, we check if its category exists, if it doens't we create the category
+    documents.forEach(function(myDocument, index, array){
+      if(!categoriesAlreadyBuilt[myDocument.category]){ //new category
+        categoriesAlreadyBuilt[myDocument.category] = true; //this category is going to be built
+        var HTMLToBuild = '<div class="row tab">' +
+                            '<a class="tabTitle col-md-12" onclick="chooseCategory(this);">' + myDocument.category + '</a>' +
+                            '<div class="docsContainer col-md-12" id="'+ myDocument.category.replace(" ", "_") +'"></div>' +
+                          '</div>';
+        document.getElementById("TabsContainer").innerHTML += HTMLToBuild;
+      }
+      //then we check if the document doesn't already exist, if it doesn't we create it
+      if(!documentsAlreadyBuilt[myDocument.id]){ //new document
+        documentsAlreadyBuilt[myDocument.id] = true;
+        buildDocument(myDocument); //we built the HTML structure of the document
+      }
+    });
+    //we put the badges category at the end of all categories, so if it's an update we move the badges tab to the end of all tabs
+    //if it's not an update, the badges tab wouldn't exist and we would get an error
+    if(isUpdate)document.getElementById('TabsContainer').appendChild(document.getElementById('badgesTab'));
+    //if there is not any documents to display, we don't need the submit button (because there are no visibilities to update)
+    //we disable the button
+    if(groups.length == 0 && documents.length == 0){
+      document.getElementById("submitChanges").disabled = true;
+      document.getElementById("submitChanges").style.opacity = "0.3";
+      document.getElementById("noDocumentsMessage").removeAttribute("hidden");
+    }else{ //in all other cases we need the button
+      document.getElementById("submitChanges").disabled = false;
+      document.getElementById("submitChanges").style.opacity = "1";
+      document.getElementById("noDocumentsMessage").setAttribute("hidden", true);
+    }
+  }
+  
+  //function to build a document inside its correct container/category/tab
+  //myDocument : document object from the documents list sent by the server
+  function buildDocument(myDocument){
+    var documentUrl = myDocument.url != "" ? myDocument.url : "javascript:;"; //we can not have an HTML href attribute empty, we use javascript:; instead
+    var documentRelatedWebsite = myDocument.relatedWebsite != "" ? myDocument.relatedWebsite : "javascript:;"; //same thing for the related website
+    var hiddenUrl = myDocument.url == "" ? 'hidden="true"' : ""; //if we have to hide the url because it's empty
+    var hiddenRelatedWebsite = myDocument.relatedWebsite == "" ? 'hidden="true"' : ""; //same thing for the related website
+    //if there is a source, we display it, the sourceID attribute will be used later to update the document
+    var sourceP = myDocument.source == "" ? "" : '<p class="documentSource" documentID="'+ myDocument.id+'">Source du document : '+myDocument.source+'</p>';
+    //for embeded element like video player, audio player, or an image (if the document is a video, an audio or an image)
+    var embededElement = getCorrectEmbedCode(myDocument.url);
+    //visibility preference
+    var visibilityValue = myDocument.visibility ? "checked" : "";
+    //HTML Structure building of the document
+    var htmlContent = '<div class="documentBlock col-md-12">' +
+                        '<div class="documentContent col-md-12">' +
+                          '<input id="Visibility'+ myDocument.id +'" documentID="'+ myDocument.id +'" class="visibilityCheckBox documentVisibility" type="checkbox" '+ visibilityValue +'/>' +
+                          '<label for="Visibility' + myDocument.id + '"></label>' +
+                          '<div class="removeButton" documentID="'+ myDocument.id +'" onclick="removeDocument(this)"></div>' +
+                          '<input id="Edition'+ myDocument.id +'" class="editionCheckBox" type="checkbox"/>' +
+                          '<label onclick="editDocument(this)" documentID="'+ myDocument.id +'"></label>' +
+                          '<p class="documentTitle" id="title'+ myDocument.id +'">'+ myDocument.title +'</p>' + 
+                          embededElement +
+                          '<p class="documentDescription" id="description'+ myDocument.id +'">' + myDocument.description + '</p>' +
+                          '<a href="'+ documentUrl +'" id="url'+ myDocument.id +'" target="_blank" '+hiddenUrl+'> Lien du document</br></a>' +
+                          '<p id="editUrlLabel'+ myDocument.id +'" hidden="true" style="margin-bottom:5px;">Url du document :</p>' +
+                          '<p id="editUrl'+ myDocument.id +'" hidden="true" style="margin-top:5px;">'+ myDocument.url +'</p>' +
+                          '<a href="'+ documentRelatedWebsite +'" id="relatedWebsite'+ myDocument.id +'" target="_blank" '+hiddenRelatedWebsite+'> Site web associé</a>' +
+                          '<p id="editRelatedWebsiteLabel'+ myDocument.id +'" hidden="true" style="margin-bottom:5px;">Site web associé :</p>' +
+                          '<p id="editRelatedWebsite'+ myDocument.id +'" hidden="true" style="margin-top:5px;">'+ myDocument.relatedWebsite +'</p>' +
+                          '<p class="documentDate">Réalisé le : <span id="date'+ myDocument.id +'" onkeypress="return (this.innerHTML.length < 10)">'+ myDocument.creationDate +'</span></p>' +
+                          sourceP +
+                          '<div class="alert alert-danger" hidden="true" id="alert'+myDocument.id+'"></div>' +
+                        '</div>' +
+                      '</div>';
+    document.getElementById(myDocument.category.replace(" ", "_")).innerHTML += htmlContent; //we append this document to its matching tab
+  }
+  
+  //function to remove a document
+  //element : html structure of the document to remove
+  function removeDocument(element){
+    document.getElementById("errorMessage").setAttribute("hidden", "true");
+    document.getElementById("savedMessage").setAttribute("hidden", "true");
+    if(confirm("Voulez-vouz vraiment supprimer ce document? Cette action est irreversible.")){
+      var documentIDtoRemove = element.getAttribute("documentID"); //we get the id of the document to send to the server
+      
+      //request
+      var xmlHttpRemoveDocument = new XMLHttpRequest();
+      xmlHttpRemoveDocument.open( "GET", "deletePortfolioDocument/"+documentIDtoRemove, false ); // false for synchronous request
+      xmlHttpRemoveDocument.send();
+      if(xmlHttpRemoveDocument.status != 200 && xmlHttpRemoveDocument.status != 304){ //if error
+        document.getElementById("errorMessage").innerHTML = "Une erreur du serveur est survenue pour supprimer le document demandé";
+        document.getElementById("errorMessage").removeAttribute("hidden");
+        return;
+      }
+      
+      //we remove now all HTML nodes not used anymore
+      var childToRemove = element.parentNode.parentNode;
+      var parent = childToRemove.parentNode;
+      parent.removeChild(childToRemove);
+      if(!parent.hasChildNodes()){ //if this category is now empty, we remove it
+        var categoryToRemove = parent.parentNode;
+        categoryToRemove.parentNode.removeChild(categoryToRemove);
+      }
+      //this document is not build anymore because it's removed
+      documentsAlreadyBuilt[documentIDtoRemove] = false;
+      
+      //UI Message
+      document.getElementById("savedMessage").innerHTML = "Document supprimé avec succès";
+      document.getElementById("savedMessage").removeAttribute("hidden");
+    }
+  }
+  
+  //function to handle the editing mode of a document
+  //labelElement : HTML label tag with is used to go into or out of the editing mode
+  function editDocument(labelElement){
+    var documentID = labelElement.getAttribute("documentID"); //id of the document to edit
+    var wasEditingMode = document.getElementById("Edition"+documentID).checked;//if this document was editing mode before, that means we want to get out of it
+    
+    //if another document is still in editing mode, we can not edit this one until the other document edition is finished
+    if(!wasEditingMode && isADocumentInEditingMode){
+      alert("Un autre document est déjà en cours d'édition. Veuillez le terminer avant d'en éditer un autre. Merci.");
+      return;
+    }
+    
+    //document elements
+    var titleElement = document.getElementById("title"+documentID);
+    var descriptionElement = document.getElementById("description"+documentID);
+    var dateElement = document.getElementById("date"+documentID);
+    var urlLink = document.getElementById("url"+documentID);
+    var relatedWebsiteLink = document.getElementById("relatedWebsite"+documentID);
+    var urlElement = document.getElementById("editUrl"+documentID);
+    var urlElementLabel = document.getElementById("editUrlLabel"+documentID);
+    var relatedWebsiteElement = document.getElementById("editRelatedWebsite"+documentID);
+    var relatedWebsiteElementLabel = document.getElementById("editRelatedWebsiteLabel"+documentID);
+    var alertElement = document.getElementById("alert"+documentID);
+    var embededElement = titleElement.parentElement.getElementsByClassName("embededElement")[0];
+    
+    //we are entering in the editing mode only if no other elements are in the editing mode
+    if(!wasEditingMode && !isADocumentInEditingMode){
+      isADocumentInEditingMode = true; // to avoid multiple element editings
+      // we hide link elements and display their <p> equivalent
+      urlLink.setAttribute("hidden", true);
+      relatedWebsiteLink.setAttribute("hidden", true);
+      urlElement.removeAttribute("hidden");
+      relatedWebsiteElement.removeAttribute("hidden");
+      urlElementLabel.removeAttribute("hidden");
+      relatedWebsiteElementLabel.removeAttribute("hidden");
+      
+      //we put all elements on editable mode
+      titleElement.setAttribute("contenteditable", true);
+      descriptionElement.setAttribute("contenteditable", true);
+      dateElement.setAttribute("contenteditable", true);
+      urlElement.setAttribute("contenteditable", true);
+      relatedWebsiteElement.setAttribute("contenteditable", true);
+      
+      //and check the checkbox which is the editing mode button
+      document.getElementById("Edition"+documentID).checked = true;
+      
+    }else{ //we are leaving the editing mode   
+      //check data entered
+      alertElement.setAttribute("hidden", true);//remove potential error messages
+      //to check the date
+      var dateRegex = /^(0[1-9]|[12][0-9]|3[01])[/](0[1-9]|1[012])[/]\d{4}$/;
+      //to check urls
+      var urlRegex = /(http(s)?:\/\/.)(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;
+      //We need to replace <br> because that will be here by default in an empty p
+      if(urlElement.innerHTML == "</br>" || urlElement.innerHTML == "<br>")  urlElement.innerHTML = "";
+      if(relatedWebsiteElement.innerHTML == "</br>" || relatedWebsiteElement.innerHTML == "<br>")  relatedWebsiteElement.innerHTML = "";
+      if(titleElement.innerHTML == "</br>" || titleElement.innerHTML == "<br>")  titleElement.innerHTML = "";
+      if(descriptionElement.innerHTML == "</br>" || descriptionElement.innerHTML == "<br>")  descriptionElement.innerHTML = "";
+      if(dateElement.innerHTML == "</br>" || dateElement.innerHTML == "<br>")  dateElement.innerHTML = "";
+      
+      //conditions checking
+      if(titleElement.innerHTML == ""){ //title
+        alertElement.innerHTML = "Veuillez entrer un titre.";
+        alertElement.removeAttribute("hidden");
+        return;
+      }else if(descriptionElement.innerHTML == ""){ //description
+        alertElement.innerHTML = "Veuillez entrer une description.";
+        alertElement.removeAttribute("hidden");
+        return;
+      }else if(dateElement.innerHTML == "" || !dateElement.innerHTML.match(dateRegex)){ //creation date
+        alertElement.innerHTML = "Veuillez entrer une date correcte (format JJ/MM/AAAA).";
+        alertElement.removeAttribute("hidden");
+        return;
+      }else if(urlElement.innerHTML != "" && !urlElement.innerHTML.match(urlRegex)){ //url
+        alertElement.innerHTML = 'L\'adresse URL du document est incorrecte (peut être avez-vous oublier "http://" ou "https://" ?)';
+        alertElement.removeAttribute("hidden");
+        return;
+      }else if(relatedWebsiteElement.innerHTML != "" && !relatedWebsiteElement.innerHTML.match(urlRegex)){ //related website
+        alertElement.innerHTML = 'L\'adresse URL du site web associé est incorrecte (peut être avez-vous oublier "http://" ou "https://" ?)';
+        alertElement.removeAttribute("hidden");
+        return;
+      }
+      
+      // we display link elements and hide their <p> equivalent
+      urlElement.setAttribute("hidden", true);
+      relatedWebsiteElement.setAttribute("hidden", true);
+      urlElementLabel.setAttribute("hidden", true);
+      relatedWebsiteElementLabel.setAttribute("hidden", true);
+      
+      //we remove all editable modes
+      titleElement.removeAttribute("contenteditable");
+      descriptionElement.removeAttribute("contenteditable");
+      dateElement.removeAttribute("contenteditable");
+      urlElement.removeAttribute("contenteditable");
+      relatedWebsiteElement.removeAttribute("contenteditable");
+      
+      //update links href
+      //<a> with href="" is not valid so we use href="javascript:;" to know if it's empty or not
+      urlLink.href = urlElement.innerHTML != "" ? urlElement.innerHTML : "javascript:;";
+      relatedWebsiteLink.href = relatedWebsiteElement.innerHTML != "" ? relatedWebsiteElement.innerHTML : "javascript:;";
+      if(urlLink.href == "javascript:;") urlLink.setAttribute("hidden", true); //if it's empty, we hide it
+      if(relatedWebsiteLink.href == "javascript:;") relatedWebsiteLink.setAttribute("hidden", true); //if it's empty, we hide it
+      if(urlLink.href != "javascript:;") urlLink.removeAttribute("hidden"); //if it's not empty, we display it
+      if(relatedWebsiteLink.href != "javascript:;") relatedWebsiteLink.removeAttribute("hidden"); //if it's not empty, we display it
+      //we update embed elements if they exists
+      if(embededElement != null){
+        if(embededElement.getElementsByTagName("img").length){
+          embededElement.getElementsByTagName("img")[0].src = urlElement.innerHTML != "" ? urlElement.innerHTML : "#";
+        }
+      }
+      
+      //element to send to the database for the update
+      var dataToUpdate = {
+        "title" : titleElement.innerHTML,
+        "url" : urlElement.innerHTML,
+        "relatedWebsite" : relatedWebsiteElement.innerHTML,
+        "creationDate" : dateElement.innerHTML,
+        "description" : descriptionElement.innerHTML
+      };
+      //request
+      var xmlHttpUpdateDocument = new XMLHttpRequest();
+      xmlHttpUpdateDocument.open( "PUT", "updatePortfolioDocument/"+documentID, false ); // false for synchronous request
+      xmlHttpUpdateDocument.setRequestHeader("Content-type", "application/json");
+      xmlHttpUpdateDocument.onreadystatechange = function(){
+          if (xmlHttpUpdateDocument.readyState == 4 && (xmlHttpUpdateDocument.status == 200 || xmlHttpUpdateDocument.status == 304)) { //if success
+            document.getElementById("Edition"+documentID).checked = false;
+    	      isADocumentInEditingMode = false; //to allow an other element editing
+          }else if (xmlHttpUpdateDocument.readyState == 4 && xmlHttpUpdateDocument.status == 404){
+            alertElement.innerHTML = 'Le document n\'a pas été trouvé dans la base de données. Veuillez recharger la page ou l\'application.';
+            alertElement.removeAttribute("hidden");
+          }else if (xmlHttpUpdateDocument.readyState == 4){ //other errors
+            alertElement.innerHTML = 'Erreur serveur. Veuillez recharger la page ou l\'application.';
+            alertElement.removeAttribute("hidden"); 
+          }
+      }
+      xmlHttpUpdateDocument.send( JSON.stringify(dataToUpdate) );
+      
+    }
+  }
+  
+  
+  /*************************/
+  /** DoYouBuzz functions **/
+  /*************************/
+  
+  //function to get documents from DoYouBuzz
+  function syncDYBDocuments(){
+    //remove potential UI Messages
+    var successMessage = document.getElementById("savedMessage");
+    var errorMessage = document.getElementById("errorMessage");
+    successMessage.setAttribute("hidden", "true");
+    errorMessage.setAttribute("hidden", "true");
+    //request
+    var xmlHttpSyncDYB = new XMLHttpRequest();
+    xmlHttpSyncDYB.open( "GET", "syncDYBDocuments", false ); // false for synchronous request
+    xmlHttpSyncDYB.send();
+    
+    //and display UI messages
+    if (xmlHttpSyncDYB.status == 200 || xmlHttpSyncDYB.status == 304){
+      var updates = JSON.parse(xmlHttpSyncDYB.responseText);
+      //we update the html element of each concerned document and update them
+      updates.forEach(function(documentUpdate, index, array){
+        if(document.getElementById("title"+documentUpdate._id) == null) return;//this document is not already built, we continue, it will be built after
+        document.getElementById("title"+documentUpdate._id).innerHTML = documentUpdate.title;
+        document.getElementById("description"+documentUpdate._id).innerHTML = documentUpdate.description;
+        document.getElementById("date"+documentUpdate._id).innerHTML = documentUpdate.creationDate;
+        document.getElementById("url"+documentUpdate._id).href = documentUpdate.url != "" ? documentUpdate.url : "javascript:;";
+        document.getElementById("relatedWebsite"+documentUpdate._id).href = documentUpdate.relatedWebsite != "" ? documentUpdate.relatedWebsite : "javascript:;";
+        document.getElementById("editUrl"+documentUpdate._id).innerHTML = documentUpdate.url;
+        document.getElementById("editRelatedWebsite"+documentUpdate._id).innerHTML = documentUpdate.relatedWebsite;
+        document.getElementById("Visibility"+documentUpdate._id).checked = documentUpdate.visibility;
+        //we update embeded elements if they exist
+        var embededElement = document.getElementById("title"+documentUpdate._id).parentElement.getElementsByClassName("embededElement")[0];
+        if(embededElement != null){
+          if(embededElement.getElementsByTagName("img").length){
+            embededElement.getElementsByTagName("img")[0].src = documentUpdate.url != "" ? documentUpdate.url : "#";
+          }
+        }
+      });
+      init(false, true, false); //documents update
+      successMessage.innerHTML = "Documents DoYouBuzz synchronisés";
+      successMessage.removeAttribute("hidden");
+    }else if(xmlHttpSyncDYB.status == 404){
+      errorMessage.innerHTML = xmlHttpSyncDYB.responseText;
+      errorMessage.removeAttribute("hidden");
+    }else{
+      errorMessage.innerHTML = "Une erreur est survenue lors de la synchronisation avec DoYouBuzz";
+      errorMessage.removeAttribute("hidden");
+    }
+    
+  }
+  
+  /********************************/
+  /** Function for embed element **/
+  /********************************/
+  
+  function getCorrectEmbedCode(url){
+    if(url == "") return "";
+    //all regular expressions needed to check the url and get the correct type of document
+    //image regex
+    var regexImage = /\.(jpe?g|png|gif|bmp|tiff)$/i; //only jpeg, jpg, png, gif, bmp, tiff
+    //audio regex -> not functional for now as we need a client id from soundcloud API
+    var regexSoundcloud = /^https?:\/\/(soundcloud.com|snd.sc)\/(.*)$/; //only soundcloud (snc.sc is also soundcloud)
+    //video regex
+    var regexYoutube = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    var regexVimeo = /^(?:https?:\/\/)?(?:www\.)?(vimeo.com\/)((channels\/[A-z]+\/)|(groups\/[A-z]+\/videos\/))?([0-9]+)/;
+    var regexDailymotion = /^(?:https?:\/\/)?(?:www\.)?dailymotion.com\/(video|hub)\/([^_]+)[^#]*(#video=([^_&]+))?/;
+    
+    //all test and matching embeded code returned
+    //if it's an image
+    if(regexImage.test(url)){
+      return('<div class="text-center embededElement"><img src="'+url+'"/></div>');
+    }
+    //if it's a soundcloud audio
+    if(regexSoundcloud.test(url)){
+      return "";
+    }
+    //if it's a youtube video
+    /*match = url.match(regexYoutube); //thanks to the regex, we grab the video id -> match[1]
+    if(match != null) {
+      return "";
+      //return '<div class="text-center"><iframe width="700" height="315" src="//www.youtube.com/embed/'+match[1]+'" frameborder="0" allowfullscreen></iframe></div>';
+    }*/
+    //if it's a vimeo video
+    if(regexVimeo.test(url)){
+      return "";
+    }
+    //if it's a dailymotion video
+    if(regexDailymotion.test(url)){
+      return "";
+    }
+    return "";
+  }

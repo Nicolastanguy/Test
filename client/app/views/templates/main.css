@@ -1,0 +1,237 @@
+/*************************/
+/**       GLOBAL        **/
+/*************************/
+
+/* Vertical navigation bar with responsive design */ 
+@media (min-width: 768px) {
+  .sidebar-nav .navbar .navbar-collapse {
+    padding: 0;
+    max-height: none;
+  }
+  .sidebar-nav .navbar ul {
+    float: none;
+  }
+  .sidebar-nav .navbar ul:not {
+    display: block;
+  }
+  .sidebar-nav .navbar li {
+    float: none;
+    display: block;
+  }
+  .sidebar-nav .navbar li a {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  
+  div.navbar{
+    border-radius:0px;
+    margin-top:20px;
+    background-color:rgba(0,0,0,0);
+  }
+  
+  div.navbar ul.nav li a{
+    color:#444;
+    font-weight:700;
+  }
+  
+  div.navbar ul.nav li a:hover{
+    color:#BBB;
+    font-weight:700;
+    background-color:rgb(44, 62, 80);
+  }
+}
+
+@media (max-width: 767px) {
+  h3.nav-header{
+    display: none;
+  }
+}
+
+div.leftMenu{
+  padding:0;
+}
+
+
+/*General elements*/
+div.container{
+  width:100%;
+  padding:0;
+}
+
+p{
+  margin-top:15px;
+}
+
+body{
+  background-color: #ecf0f1;
+}
+
+/***********************/
+/**    COMPONENTS     **/
+/***********************/
+
+/*---------------------------*/
+/*Spinner loading icon*/
+.spinner {
+  height: 28px;
+  width: 28px;
+  animation: rotate 0.8s infinite linear;
+  border: 5px solid #f39c12;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+@keyframes rotate {
+  0%    { transform: rotate(0deg); }
+  100%  { transform: rotate(360deg); }
+}
+/*---------------------------*/
+
+
+/*---------------------------*/
+/* Button to set visibility */
+/*
+  HTML Structure (Jade)
+    input#exempleID.visibilityCheckBox(type="checkbox", name="#exempleID")
+    label(for="#exempleID")
+*/
+input.visibilityCheckBox[type="checkbox"]{
+  display:none;
+}
+
+input.visibilityCheckBox[type="checkbox"] + label{
+  content:"";
+  width:27px;
+  height:27px;
+  border:3px solid #bbb;
+  background-color: #777;
+  cursor: pointer;
+  box-shadow: 0px 0px 2px #333 inset;
+  transition: all 0.3s ease-out;
+}
+
+input.visibilityCheckBox[type="checkbox"]:checked + label{
+  background-color: #27ae60;
+  box-shadow: 0px 0px 5px #333 inset;
+  transition: all 0.3s ease-out;
+}
+
+input.visibilityCheckBox[type="checkbox"] + label:hover::after, input.visibilityCheckBox[type="checkbox"]:checked + label:hover::after{
+  display: block;
+  position: absolute;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(0,0,0,.7);
+  -moz-border-radius:5px;
+  -webkit-border-radius:5px;
+  border-radius:5px;
+  color: #fff;
+  font-size: .86em;
+  padding:0.3em;
+}
+
+/*Explaination popup*/
+input.visibilityCheckBox[type="checkbox"] + label:hover::after{
+  content: "Afficher sur mon portfolio";
+}
+
+input.visibilityCheckBox[type="checkbox"]:checked + label:hover::after{
+  content: "Enlever de mon portfolio";
+}
+/*---------------------------*/
+
+
+/*---------------------------*/
+/*Star for mandatory forms elements*/
+span.mandatoryStar{
+  vertical-align:super;
+  color:#e74c3c;
+}
+/*---------------------------*/
+
+
+/*---------------------------*/
+/* Button to remove a document */
+/*
+  HTML Structure (Jade)
+    div.removeButton(documentID="exempleID" onclick="removeDocument(this)")
+*/
+div.removeButton{
+  border:3px solid #bbb;
+  width:27px;
+  height:27px;
+  background-color: #c0392b;
+  cursor: pointer;
+  transition: box-shadow 0.3s;
+}
+
+div.removeButton:hover{
+  box-shadow: 0px 0px 3px #333 inset;
+  transition: box-shadow 0.3s;
+}
+
+div.removeButton::before, div.removeButton::after {
+    content: '';
+    position: absolute;
+    height: 3px;
+    width: 100%;
+    top: 50%;
+    left: 0;
+    margin-top:-2px;
+    background: #bbb;;
+}
+
+/*cross shape*/  
+div.removeButton::before {
+  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+}
+
+div.removeButton::after {
+  transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+}
+/*---------------------------*/
+
+
+/*---------------------------*/
+/** Button for editing mode **/
+/*
+  HTML Structure (Jade)
+    input#exempleID.editionCheckBox(type="checkbox", name="exempleID")
+    label(documentID="exempleID" onclick="editDocument(this)")
+*/
+input.editionCheckBox[type="checkbox"]{
+  display:none;
+}
+
+input.editionCheckBox[type="checkbox"] + label{
+  content:"";
+  color:black;
+  width:75px;
+  height:27px;
+  border:3px solid #bbb;
+  background-color: #bdc3c7;
+  cursor: pointer;
+  box-shadow: 0px 0px 2px #333 inset;
+  transition: all 0.3s ease-out;
+}
+
+input.editionCheckBox[type="checkbox"]:checked + label{
+  content:"";
+  background-color: #f39c12;
+  box-shadow: 0px 0px 5px #333 inset;
+  transition: all 0.3s ease-out;
+}
+
+/*Label inside the button*/
+input.editionCheckBox[type="checkbox"] + label::after{
+  content:"Modifier";
+  margin-left:5px;
+}
+
+input.editionCheckBox[type="checkbox"]:checked + label::after{
+  content:"Terminer";
+  margin-left:3px;
+}
+/*---------------------------*/

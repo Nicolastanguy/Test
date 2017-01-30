@@ -1,11 +1,54 @@
 {
-  "name": "HelloWorld",
-  "cozy-type": "static",
-  "cozy-displayName": "Hello World",
-  "version": "1.0.0",
-  "description": "Ceci est une app de test - ma premiere appli sur CozyCloud",
-  "icon-path": "main_icon.png",
+  "name": "portfolio",
+  "cozy-displayName": "Portfolio",
+  "version": "1.0.1",
+  "author": "Cédric Patchane Lacane",
+  "engine": {
+    "node": "*"
+  },
+  "description": "Create your portfolio on your Cozy Cloud with the possibility to grab information from DoYouBuzz and OpenBadges",
+  "icon-path": "client/public/icons/main_icon.svg",
+  "licenses": [
+    {
+      "type": "AGPL v3.0",
+      "url": "http://www.gnu.org/licenses/agpl-3.0.html"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://CPatchane@bitbucket.org/CPatchane/cozy-portfolio.git"
+  },
+  "main": "server.js",
+  "dependencies": {
+    "americano": "0.4.2",
+    "cozydb": "0.1.3",
+    "jade": "^1.11.0",
+    "request": "^2.67.0",
+    "request-json-light": "^0.5.25"
+  },
+  "devDependencies": {
+    "should": "7.1.1",
+    "mocha": "2.3.3",
+    "request-json": "0.5.3",
+    "cozy-fixtures": "1.0.1",
+    "jslint": "0.9.3"
+  },
+  "scripts": {
+    "test": "mocha tests/*.js",
+    "start": "node server.js"
+  },
   "cozy-permissions": {
-    "Contacts": "This app manages your contacts"
+    "portfolioUser": {
+      "description": "Informations about user profil"
+    },
+    "portfolioDocument": {
+      "description": "All documents informations used for the portfolio"
+    },
+    "badgesGroup": {
+      "description": "All badges informations (OpenBadges)"
+    },
+    "portfolioAccounts": {
+      "description": "Informations needed for DoYouBuzz API and OpenBadges Backpack API"
+    }
   }
 }

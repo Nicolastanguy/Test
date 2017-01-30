@@ -1,0 +1,213 @@
+/*************************/
+/**       GLOBAL        **/
+/*************************/
+
+p{
+  margin-top:15px;
+}
+
+body{
+  background-color: #ecf0f1;
+}
+
+/*************************/
+/**     PUBLIC VIEW     **/
+/*************************/
+
+#TabsContainer{
+  margin-top:30px;
+}
+
+.row{
+  margin-right: 0px;
+  margin-left: 0px;
+}
+
+/*Headline*/
+h1{
+  margin-bottom:5px;
+}
+
+/*subHeadline*/
+.secondTitle{
+  font-family: Courier New, Courier, monospace;
+  font-weight: 500;
+  color:#3498db;
+  font-size: 15px;
+  font-style: italic;
+  margin-bottom:30px;
+}
+
+.secondTitle a{
+  color:#3498db;
+  text-decoration: underline;
+  
+}
+
+/*specific to the user presentation tab*/
+.presentationTab p{
+  margin-bottom: 0px;
+}
+
+/*Design for each hobby and keyword*/
+.hobby, .keyword{
+  display:inline-block;
+  padding: 2px 5px;
+  border:1px solid #999;
+  color:#555;
+  border-radius:3px;
+  background-color: rgba(200,200,200,0.3);
+  margin: 2px;
+}
+
+/*Design for each tab of category*/
+.tab{
+  border:1px solid #555;
+  margin:0 10px;
+  position: relative;
+  padding-bottom: 10px;
+  border-radius: 8px 8px 3px 3px;
+  background-color: rgb(44,62,80);
+  height: 65px;
+  margin-top:-8px;
+  overflow: hidden;
+  transition:all 0.3s ease;
+}
+
+/*if the user chooses on these tabs*/
+.tab.choiceCategory{
+  height:auto!important;
+  min-height: 80px!important;
+  margin-top:-8px!important;
+  overflow: scroll;
+  box-shadow: 0px 0px 15px black;
+  background-color: rgb(64,82,100);
+  transition:all 0.3s ease;
+}
+
+/*if the user hovers on these tabs*/
+.tab:hover{
+  box-shadow: 0px 0px 15px black;
+  height:100px;
+  margin-top:-43px;
+  transition:all 0.3s ease;
+}
+
+.tabTitle{
+  padding:20px;
+  border-radius: 15px 15px 0px 0px;
+  font-size: 18px;
+  color: #fbfcfc;
+  display:block;
+  clear: both;
+  cursor: pointer;
+}
+
+/*container for one category on documents*/
+.docsContainer{
+  padding:5px;
+  min-height: 100px;
+}
+
+/*Block for one badge*/
+.badgeBlock{
+  padding:5px;
+  margin-bottom:5px;
+}
+
+/*container of a badge*/
+.badgeBlock .badgeContent{
+  box-shadow: 0px 0px 8px #999;
+  padding:2px;
+  background-color: rgba(255,255,255,0.9);
+  min-height:124px;
+}
+
+/*Badge image*/
+img.badgeImage{
+  width:100px;
+  display: inline-block;
+  float:left;
+  height:100px;
+  margin:10px;
+  padding:8px;
+  border-radius: 5px;
+  box-shadow: 0px 0px 5px #333 inset;
+  border:2px solid #bbb;
+  -webkit-filter: drop-shadow(0px 0px 5px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0px 0px 5px rgba(0, 0, 0, 0.5));
+}
+
+/*badge details part*/
+.badgeBlock .badgeDetails{
+  display: block;
+}
+
+.badgeDetails span.badgeName{
+  font-weight: 900;
+}
+
+.badgeDetails p.badgeIssuer{
+  margin-bottom:8px;
+  margin-top: 12px;
+  margin-right: 30px;
+}
+.badgeDetails p.badgeDescription{
+  margin-top:0px;
+  margin-bottom:0px;
+  font-size: 14px;
+  margin-left:8px;
+  margin-right:5px;
+}
+
+.badgeDetails .badgeLink{
+  float:right;
+  margin-right:10px;
+  padding:10px;
+}
+
+.badgeBlock a{
+  color:black;
+  text-decoration: underline;
+}
+
+/*Block for one document*/
+.documentBlock{
+  padding:5px;
+  margin-bottom:5px;
+}
+
+/*Container for one document*/
+.documentBlock .documentContent{
+  box-shadow: 0px 0px 8px #999;
+  padding:5px;
+  background-color: rgba(255,255,255,0.9);
+  min-height:124px;
+  font-size: 12pt;
+}
+
+.documentBlock .documentContent a{
+  color:#2980b9;
+  text-decoration: underline;
+}
+
+.documentBlock .documentContent .documentTitle{
+  padding-left:25px;
+  font-size:14pt;
+}
+
+.documentBlock .documentContent .documentDate{
+  font-size: 10pt;
+}
+
+/*FOR EMBEDED ELEMENTS*/
+.embededElement img{
+  border-radius: 2px;
+  box-shadow: 0px 0px 8px rgba(0,0,0,0.7);
+  border:1px solid black;
+  max-width:98%;
+}
+
+.embededElement iframe{
+  border:1px solid black;
+}
